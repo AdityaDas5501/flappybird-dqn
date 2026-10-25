@@ -89,7 +89,7 @@ class Agent:
 
             step = 0
             
-            episode_reward = 
+            episode_reward = 0
             total_modified_score = 0
             terminated = False
             
