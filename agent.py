@@ -139,7 +139,7 @@ class Agent:
                 print(f"Ep: {episode+1} \tTotal Raw Reward: {episode_reward:.10f} \tModified Reward: {total_modified_score:.5f} \tEpsilon: {self.epsilon:.5f}")
 
                 if episode_reward > best_rewards:
-                    log_msg = f"Best Raw Reward: {episode_reward::.5f} (Modified Reward: {total_modified_score:.5f}) for Ep:{episode+1}"
+                    log_msg = f"Best Raw Reward: {episode_reward:.5f} (Modified Reward: {total_modified_score:.5f}) for Ep:{episode+1}"
 
                     with open(self.LOG_FILE, "a") as f:
                         f.write(log_msg + "\n")
