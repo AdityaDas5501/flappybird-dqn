@@ -90,10 +90,10 @@ class Agent:
             step = 0
             
             episode_reward = 0
-            total_modified_score = 0
-            terminated = False
+            total_modified_reward = 0
+            done = False
             
-            while (not terminated and episode_reward < self.reward_threshold):
+            while (not done and episode_reward < self.reward_threshold):
                 if is_training and random.random() < self.epsilon:
                     action = env.action_space.sample()    #EXPLORE
                 else:
@@ -102,20 +102,21 @@ class Agent:
                         action = policy_dqn(state_tensor.unsqueeze(dim=0)).squeeze().argmax().item()    #EXPLOIT
         
                 # Processing:
-                next_state, reward, terminated, _, _ = env.step(action)
+                next_state, reward, terminated, truncated, _ = env.step(action)
+                done = terminated or truncated
 
-                if terminated:
-                    modified_reward = -2.0
-                elif reward > 0:
-                    modified_reward = 5.0
+                if done:
+                    modified_reward = -1.0
+                elif reward >= 1.0:
+                    modified_reward = 10.0
                 else:
-                    modified_reward = 0.02
+                    modified_reward = 0.0
                 
                 episode_reward += reward
-                total_modified_score += modified_reward
+                total_modified_reward += modified_reward
         
                 if is_training:
-                    memory.append((state, action, next_state, modified_reward, terminated))
+                    memory.append((state, action, next_state, modified_reward, done))
                     step += 1
                     target_copy_step += 1
 
@@ -136,10 +137,10 @@ class Agent:
                         target_copy_step = 0
 
             if is_training:
-                print(f"Ep: {episode+1} \tTotal Raw Reward: {episode_reward:.10f} \tModified Reward: {total_modified_score:.5f} \tEpsilon: {self.epsilon:.5f}")
+                print(f"Ep: {episode+1} \tTotal Raw Reward: {episode_reward:.5f} \tModified Reward: {total_modified_reward:.5f} \tEpsilon: {self.epsilon:.5f}")
 
                 if episode_reward > best_rewards:
-                    log_msg = f"Best Raw Reward: {episode_reward:.5f} (Modified Reward: {total_modified_score:.5f}) for Ep:{episode+1}"
+                    log_msg = f"Best Raw Reward: {episode_reward:.5f} (Modified Reward: {total_modified_reward:.5f}) for Ep:{episode+1}"
 
                     with open(self.LOG_FILE, "a") as f:
                         f.write(log_msg + "\n")
