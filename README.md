@@ -9,7 +9,7 @@ After training for **50,000 episodes**, the DQN agent successfully learned the o
 
 Here is a demonstration of the fully trained agent playing the game:
 
-![Trained Flappy Bird Agent](merged_gameplay.gif)
+![Trained Flappy Bird Agent](gameplay.gif)
 
 *Note: The agent relies purely on its neural network (Exploitation) during this test phase, with the exploration rate (epsilon) decayed to its minimum.*
 
