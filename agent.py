@@ -89,7 +89,8 @@ class Agent:
 
             step = 0
             
-            episode_reward = 0
+            episode_reward = 
+            total_modified_score = 0
             terminated = False
             
             while (not terminated and episode_reward < self.reward_threshold):
