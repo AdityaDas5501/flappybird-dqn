@@ -1,0 +1,14 @@
+pycache/
+*.pyc
+
+venv/
+.env
+
+.ipynb_checkpoints/
+
+runs/
+*.pt
+*.log
+*.gif
+
+.DS_Store
