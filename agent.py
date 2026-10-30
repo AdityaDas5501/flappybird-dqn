@@ -35,13 +35,15 @@ class Agent:
         self.gamma = params["gamma"]
         self.epsilon_init = params["epsilon_init"]
         self.epsilon_min = params["epsilon_min"]
-        self.epsilon_decay = params["epsilon_decay"]
+        self.decay_step = params["decay_step"]
         self.replay_memory_size = params["replay_memory_size"]
         self.mini_batch_size = params["mini_batch_size"]
         self.network_sync_rate = params["network_sync_rate"]
         self.reward_threshold = params["reward_threshold"]
+        self.warmup_steps = params.get("warmup_steps", 5000)
 
         self.epsilon = self.epsilon_init
+        self.epsilon_decay_step = (self.epsilon_init - self.epsilon_min) / self.decay_step
 
         self.loss_fn = nn.MSELoss()
         self.optimizer = None
@@ -68,6 +70,7 @@ class Agent:
 
             self.optimizer = optim.Adam(policy_dqn.parameters(), lr = self.alpha)
 
+            eval_interval = 500
             best_rewards = float("-inf")
 
         else:
@@ -94,7 +97,7 @@ class Agent:
             done = False
             
             while (not done and episode_reward < self.reward_threshold):
-                if is_training and random.random() < self.epsilon:
+                if is_training and (len(memory) < self.warmup_steps or random.random() < self.epsilon):  #Force exploration during warmup
                     action = env.action_space.sample()    #EXPLORE
                 else:
                     with torch.inference_mode():
@@ -106,11 +109,11 @@ class Agent:
                 done = terminated or truncated
 
                 if done:
-                    modified_reward = -1.0
+                    modified_reward = -2.0    #Crash
                 elif reward >= 1.0:
-                    modified_reward = 10.0
+                    modified_reward = 10.0    #Passing a pipe
                 else:
-                    modified_reward = 0.0
+                    modified_reward = 0.05    #Surviving
                 
                 episode_reward += reward
                 total_modified_reward += modified_reward
@@ -118,35 +121,44 @@ class Agent:
                 if is_training:
                     memory.append((state, action, next_state, modified_reward, done))
                     step += 1
-                    target_copy_step += 1
 
-                    #Epsilon Decay
-                    self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
+                    if len(memory) >= self.warmup_steps:
+                        target_copy_step += 1
+                        #Linear Epsilon Decay
+                        self.epsilon = max(self.epsilon - self.epsilon_decay_step, self.epsilon_min)
+
+                        #get sample
+                        mini_batch = memory.sample(self.mini_batch_size)
+        
+                        self.optimize(mini_batch, policy_dqn, target_dqn)
     
+                        #sync the network
+                        if target_copy_step > self.network_sync_rate:
+                            target_dqn.load_state_dict(policy_dqn.state_dict())
+                            target_copy_step = 0
+
                 state = next_state
 
-                if is_training and len(memory) > self.mini_batch_size:
-                    #get sample
-                    mini_batch = memory.sample(self.mini_batch_size)
-    
-                    self.optimize(mini_batch, policy_dqn, target_dqn)
-
-                    #sync the network
-                    if target_copy_step > self.network_sync_rate:
-                        target_dqn.load_state_dict(policy_dqn.state_dict())
-                        target_copy_step = 0
-
             if is_training:
-                print(f"Ep: {episode+1} \tTotal Raw Reward: {episode_reward:.5f} \tModified Reward: {total_modified_reward:.5f} \tEpsilon: {self.epsilon:.5f}")
+                print(f"Ep: {episode+1:<5} | Raw Reward: {episode_reward:.5f} | Mod Reward: {total_modified_reward:.5f} | Epsilon: {self.epsilon:.5f} | Buffer: {len(memory)}")
 
-                if episode_reward > best_rewards:
-                    log_msg = f"Best Raw Reward: {episode_reward:.5f} (Modified Reward: {total_modified_reward:.5f}) for Ep:{episode+1}"
+                if len(memory) >= self.warmup_steps and (episode + 1) % eval_interval == 0:
+                    avg_score = self.evaluate(env, policy_dqn, num_episodes=5)
+                    print(f"\n--- EVALUATION at Ep {episode+1}: Avg Raw Score = {avg_score:.2f} (Best: {best_rewards:.2f}) ---")
 
-                    with open(self.LOG_FILE, "a") as f:
-                        f.write(log_msg + "\n")
+                    if avg_score > best_rewards:
+                        best_rewards = avg_score
+                        log_msg = f"New Best Reward: {best_rewards:.2f} at Ep {episode+1}"
 
-                    torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
-                    best_rewards = episode_reward
+                        with open(self.LOG_FILE, "a") as f:
+                            f.write(log_msg + "\n")
+    
+                        torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
+
+            # Stop before Kaggle times out (adjust this number based on your testing)
+            if episode >= 50000:
+                print("Max episodes reached! Stopping training to save output.")
+                break
     
         #env.close()     #Manual Stop
 
@@ -175,6 +187,30 @@ class Agent:
         torch.nn.utils.clip_grad_norm_(policy_dqn.parameters(), max_norm=1.0)
         self.optimizer.step()
 
+    def evaluate(self, env, policy_dqn, num_episodes=5):
+        policy_dqn.eval()
+        eval_rewards = []
+    
+        for _ in range(num_episodes):
+            state, _ = env.reset()
+            done = False
+            total_eval_reward = 0
+    
+            while not done:
+                with torch.inference_mode():
+                    state_tensor = torch.tensor(state, dtype=torch.float32, device = device)
+                    action = policy_dqn(state_tensor.unsqueeze(0)).argmax(dim=1).item()
+    
+                next_state, reward, terminated, truncated, _ = env.step(action)
+                done = terminated or truncated
+                total_eval_reward += reward
+                state = next_state
+    
+            eval_rewards.append(total_eval_reward)
+    
+        policy_dqn.train()
+        return np.mean(eval_rewards)
+
 if __name__ == "__main__":
     # Parse command line inputs
     parser = argparse.ArgumentParser (description='Train or test model.')
@@ -188,3 +224,4 @@ if __name__ == "__main__":
         dql.run(is_training=True)
     else:
         dql.run(is_training=False, render=True)
+    

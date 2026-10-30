@@ -1,9 +1,10 @@
 flappybirdv0:
   env_id: FlappyBird-v0
   epsilon_init: 1
-  epsilon_min: 0.01
-  epsilon_decay: 0.99995
-  replay_memory_size: 100000
+  epsilon_min: 0.006
+  decay_step: 1350000 
+  warmup_steps: 5000
+  replay_memory_size: 250000
   mini_batch_size: 64
   network_sync_rate: 2000
   alpha: 0.0001
