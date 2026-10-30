@@ -5,7 +5,7 @@ A PyTorch implementation of a Deep Q-Network (DQN) agent that learns to play Fla
 This project uses the `gymnasium` API and `flappy-bird-gymnasium` to simulate the environment, training an agent from scratch to navigate the pipes by balancing exploration (random actions) and exploitation (using the trained neural network).
 
 ## Results
-After training for **50,000 episodes**, the DQN agent has learned the basic mechanics of the game and can successfully navigate through 3 to 4 pipes before crashing. While it does not yet play perfectly consistently, it demonstrates a clear foundational learning of timing and trajectory. 
+After training for **50,000 episodes**, the DQN agent has learned the basic mechanics of the game and can successfully navigate through 8 to 9 pipes before crashing. While it does not yet play perfectly consistently, it demonstrates a clear foundational learning of timing and trajectory. 
 
 Here is a demonstration of the agent in action:
 
