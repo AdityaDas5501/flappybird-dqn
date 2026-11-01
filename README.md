@@ -51,8 +51,16 @@ python agent.py flappybirdv0
 This loads the best weights from the `runs/` folder and renders the environment so you can watch the agent play. 
 
 ## Hyperparameters
-You can adjust the training behavior by editing `parameters.yaml`. Key parameters include:
-- `epsilon_decay`: Controls how quickly the agent stops taking random actions.
-- `alpha`: The learning rate for the neural network optimizer.
-- `gamma`: The discount factor for future rewards.
-- `mini_batch_size`: How many memories to sample during each optimization step.
+
+You can adjust the training behavior and model dynamics by editing `parameters.yaml`. Key parameters include:
+
+* `env_id`: Target Gymnasium environment (`FlappyBird-v0`).
+* `epsilon_init` / `epsilon_min`: The initial (1.0) and minimum (0.006) exploration rates for the $\epsilon$-greedy policy.
+* `decay_step`: Total environment steps over which epsilon decays linearly to its minimum floor.
+* `warmup_steps`: Number of initial steps to populate the replay buffer before network optimization begins.
+* `replay_memory_size`: Capacity of the circular experience replay buffer (FIFO).
+* `mini_batch_size`: Number of transitions sampled per gradient descent update.
+* `network_sync_rate`: Step interval for synchronizing policy network weights to the target network.
+* `alpha`: Learning rate for the Adam optimizer (`0.0001`).
+* `gamma`: Discount factor for future rewards (`0.99`).
+* `reward_threshold`: Maximum raw reward limit before completing an episode.
